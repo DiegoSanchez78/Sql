@@ -189,3 +189,129 @@ INSERT INTO Compra (id_proveedor, fecha) VALUES
 select * FROM producto;
 
 SELECT * FROM proveedor;
+
+-- **********************************************
+-- Entrega nro 2 
+
+USE TiendaGuitarras;
+
+-- VISTAS--------------------------------------------------------
+
+CREATE OR REPLACE VIEW VistaClientesVentas AS
+SELECT c.id_cliente, c.nombre, c.apellido, v.id_venta, v.fecha
+FROM Cliente c
+JOIN Venta v ON c.id_cliente = v.id_cliente;
+
+CREATE OR REPLACE VIEW VistaStockProductos AS
+SELECT id_producto, nombre, stock, precio
+FROM Producto;
+
+CREATE OR REPLACE VIEW VistaDetalleVentas AS
+SELECT v.id_venta, v.fecha, c.nombre AS cliente, p.nombre AS producto,
+       dv.cantidad, dv.precio_unit
+FROM Venta v
+JOIN Cliente c ON v.id_cliente = c.id_cliente
+JOIN DetalleVenta dv ON v.id_venta = dv.id_venta
+JOIN Producto p ON dv.id_producto = p.id_producto;
+
+
+-- FUNCIONES------------------------------------------------------
+
+DELIMITER //
+
+CREATE FUNCTION fn_TotalVenta(p_id_venta INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total DECIMAL(10,2);
+    SELECT SUM(cantidad * precio_unit) INTO total
+    FROM DetalleVenta
+    WHERE id_venta = p_id_venta;
+    RETURN IFNULL(total,0);
+END;
+//
+
+CREATE FUNCTION fn_StockDisponible(p_id_producto INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE cantidad INT;
+    SELECT stock INTO cantidad
+    FROM Producto
+    WHERE id_producto = p_id_producto;
+    RETURN IFNULL(cantidad,0);
+END;
+//
+
+DELIMITER ;
+
+-- STORED PROCEDURES --------------------------------------
+
+DELIMITER //
+
+CREATE PROCEDURE sp_RegistrarVenta(
+    IN p_id_cliente INT,
+    IN p_id_empleado INT,
+    IN p_fecha DATE
+)
+BEGIN
+    INSERT INTO Venta(id_cliente, id_empleado, fecha)
+    VALUES(p_id_cliente, p_id_empleado, p_fecha);
+END;
+//
+
+CREATE PROCEDURE sp_ActualizarStock(
+    IN p_id_producto INT,
+    IN p_cantidad INT
+)
+BEGIN
+    UPDATE Producto
+    SET stock = stock - p_cantidad
+    WHERE id_producto = p_id_producto;
+END;
+//
+
+DELIMITER ;
+
+-- TRIGGER-------------------------------------------------------------------
+
+DELIMITER //
+
+CREATE TRIGGER trg_AfterVentaDetalle
+AFTER INSERT ON DetalleVenta
+FOR EACH ROW
+BEGIN
+    UPDATE Producto
+    SET stock = stock - NEW.cantidad
+    WHERE id_producto = NEW.id_producto;
+END;
+//
+
+DELIMITER ;
+
+-- ****************************************************************
+-- Probando funcuionamiento
+
+-- VISTAS
+SELECT * FROM VistaClientesVentas;
+SELECT * FROM VistaStockProductos;
+SELECT * FROM VistaDetalleVentas;
+
+-- FUNCIONES
+SELECT fn_TotalVenta(1) AS Total_Venta_1;
+SELECT fn_StockDisponible(1) AS Stock_Producto_1;
+
+-- PROCEDURES
+CALL sp_RegistrarVenta(1, 2, CURDATE());
+CALL sp_ActualizarStock(1, 2);
+
+SELECT * FROM Venta ORDER BY id_venta DESC LIMIT 5;
+SELECT * FROM Producto WHERE id_producto = 1;
+
+-- TRIGGER
+SELECT stock FROM Producto WHERE id_producto = 1;
+
+INSERT INTO DetalleVenta (id_venta, id_producto, cantidad, precio_unit)
+VALUES (1, 1, 1, 1250.00);
+
+SELECT stock FROM Producto WHERE id_producto = 1;
