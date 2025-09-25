@@ -197,15 +197,18 @@ USE TiendaGuitarras;
 
 -- VISTAS--------------------------------------------------------
 
+-- Vista 1
 CREATE OR REPLACE VIEW VistaClientesVentas AS
 SELECT c.id_cliente, c.nombre, c.apellido, v.id_venta, v.fecha
 FROM Cliente c
 JOIN Venta v ON c.id_cliente = v.id_cliente;
 
+-- Vista 2
 CREATE OR REPLACE VIEW VistaStockProductos AS
 SELECT id_producto, nombre, stock, precio
 FROM Producto;
 
+-- Vista 3
 CREATE OR REPLACE VIEW VistaDetalleVentas AS
 SELECT v.id_venta, v.fecha, c.nombre AS cliente, p.nombre AS producto,
        dv.cantidad, dv.precio_unit
@@ -213,6 +216,20 @@ FROM Venta v
 JOIN Cliente c ON v.id_cliente = c.id_cliente
 JOIN DetalleVenta dv ON v.id_venta = dv.id_venta
 JOIN Producto p ON dv.id_producto = p.id_producto;
+
+-- Vista 4
+CREATE OR REPLACE VIEW VistaVentasPorEmpleado AS
+SELECT e.id_empleado, e.nombre, e.apellido, COUNT(v.id_venta) AS total_ventas
+FROM Empleado e
+LEFT JOIN Venta v ON e.id_empleado = v.id_empleado
+GROUP BY e.id_empleado, e.nombre, e.apellido;
+
+-- Vista 5
+CREATE OR REPLACE VIEW VistaComprasPorProveedor AS
+SELECT pr.id_proveedor, pr.nombre AS proveedor, COUNT(c.id_compra) AS total_compras
+FROM Proveedor pr
+LEFT JOIN Compra c ON pr.id_proveedor = c.id_proveedor
+GROUP BY pr.id_proveedor, pr.nombre;
 
 
 -- FUNCIONES------------------------------------------------------
@@ -296,6 +313,8 @@ DELIMITER ;
 SELECT * FROM VistaClientesVentas;
 SELECT * FROM VistaStockProductos;
 SELECT * FROM VistaDetalleVentas;
+SELECT * FROM VistaVentasPorEmpleado;
+SELECT * FROM VistaComprasPorProveedor;
 
 -- FUNCIONES
 SELECT fn_TotalVenta(1) AS Total_Venta_1;
